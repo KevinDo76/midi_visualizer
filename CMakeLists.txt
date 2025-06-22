@@ -1,7 +1,29 @@
 cmake_minimum_required(VERSION 3.10.0)
 project(midi_visualizer VERSION 0.1.0 LANGUAGES C CXX)
 
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 file(GLOB SOURCE "src/*.cpp")
+file(GLOB HEADER "src/*.h")
 
-add_executable(midi_visualizer ${SOURCE})
+set(SDLMIXER_MIDI ON CACHE BOOL "")
+set(SDLMIXER_MIDI_FLUIDSYNTH ON CACHE BOOL "")
+set(SDLMIXER_MIDI_TIMIDITY OFF CACHE BOOL "")
+set(SDLMIXER_MIDI_MODPLUG OFF CACHE BOOL "")
+set(SDLMIXER_MOD OFF CACHE BOOL "")
+set(SDLMIXER_MP3 OFF CACHE BOOL "")
+set(SDLMIXER_OGG OFF CACHE BOOL "")
+set(SDLMIXER_OPUS OFF CACHE BOOL "")
+set(SDLMIXER_FLAC OFF CACHE BOOL "")
+set(SDLMIXER_MIDI_NATIVE OFF CACHE BOOL "")   
+set(SDLMIXER_WAVE ON CACHE BOOL "")     
 
+
+add_subdirectory(lib/SDL3)
+add_subdirectory(lib/SDL_Mixer_3)
+
+add_executable(midi_visualizer ${SOURCE} ${HEADER})   
+
+target_link_libraries(midi_visualizer PRIVATE SDL3::SDL3 SDL3_mixer::SDL3_mixer)
