@@ -253,8 +253,7 @@ midiFile::midiFile(std::string filePath)
     double secondSum = 0;
     for (int i=0;i<unifiedEvents.size();i++)
     {
-        //secondSum += unifiedEvents[i].tickTime;
-        secondSum+=(unifiedEvents[i].tickTime * unifiedEvents[i].Tempo) / (division * 1000000.0);
+        secondSum+=((double)unifiedEvents[i].tickTime * unifiedEvents[i].Tempo) / (division * 1000000.0);
         unifiedEvents[i].sumSecondTime = secondSum;
     }
 

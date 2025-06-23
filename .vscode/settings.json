@@ -63,6 +63,11 @@
         "variant": "cpp",
         "chrono": "cpp",
         "iomanip": "cpp",
-        "sstream": "cpp"
+        "sstream": "cpp",
+        "codecvt": "cpp",
+        "condition_variable": "cpp",
+        "list": "cpp",
+        "set": "cpp",
+        "mutex": "cpp"
     }
 }
