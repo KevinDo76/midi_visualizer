@@ -11,16 +11,22 @@
 #include <bit>
 #include <array>
 #include <algorithm>
+#include <fluidsynth.h>
+#include <exception>
 
 midiFile::midiFile(std::string filePath)
     : inputMidi(filePath, std::ios::binary)
 {
+    currentTime = 0; 
+    lastTick = 0;
     timeSignatureNumerator = 4;
     timeSignatureDenominator = 4;
     clocksPerTick = 24;
     _32per24Clocks = 8;
     Tempo = 500000;
 
+    fluidsynthInit(filePath);
+    
     uint32_t midiMagicNumber = 0;
     uint32_t headerLength = 0;
     uint16_t format = 0;
@@ -56,7 +62,7 @@ midiFile::midiFile(std::string filePath)
         std::string trackMagicNumber;
         uint32_t trackLength = 0;
         trackMagicNumber=readString(inputMidi, 4);
-        std::cout<<trackMagicNumber<<"\n";
+        std::cout<<"------"<<trackMagicNumber<<"------"<<"\n";
         inputMidi.read((char *)&trackLength, 4);
         trackLength=std::byteswap(trackLength);
         int eventCount=0;
@@ -167,7 +173,7 @@ midiFile::midiFile(std::string filePath)
 							std::cout << "Prefix: " << inputMidi.get() << std::endl;
 							break;
 						case EndOfTrack:
-                            std::cout<<"track ended\n";
+                            std::cout<<"------Track Ended------\n";
 							endOfTrack = true;
 							break;
 						case SetTempo:
@@ -177,8 +183,7 @@ midiFile::midiFile(std::string filePath)
                             (Tempo |= (inputMidi.get() << 8));
                             (Tempo |= (inputMidi.get() << 0));
        
-                            BPM = (60000000 / Tempo);
-                            std::cout << "Tempo: " << Tempo << " (" << BPM << "bpm)  " << tickSum << std::endl;
+                            std::cout << "Tempo: " << Tempo << tickSum << std::endl;
                             midiTracks[trackI].midiEvents.emplace_back(midiEventName::systemExclusive, 0, 0, timeDelta, 0, tickSum, Tempo);
                             midiTracks[trackI].midiEvents.back().metaType = midiFile::MetaEventName::SetTempo;
 							break;
@@ -287,6 +292,14 @@ midiFile::midiFile(std::string filePath)
     std::cout<<"Midi parsed\n";
 }
 
+void midiFile::updateCurrentTime()
+{
+    uint32_t currentTick = fluid_player_get_current_tick(player);
+    uint32_t tickDelta = currentTick - lastTick;
+    lastTick = currentTick;
+    currentTime+=(tickDelta * fluid_player_get_midi_tempo(player)) / (division * 1000000.0);
+}
+
 uint32_t midiFile::readVariableAmount(std::ifstream &inputMidi)
 {
     uint32_t returnVal = 0;
@@ -314,6 +327,32 @@ std::string midiFile::readString(std::ifstream &inputMidi, uint32_t length)
     return result;
 }
 
+void quiet_log_handler(int level, const char* message, void* data) {}
+void midiFile::fluidsynthInit(std::string midiPath)
+{
+    fluid_set_log_function(FLUID_PANIC, quiet_log_handler, nullptr);
+    fluid_set_log_function(FLUID_ERR, quiet_log_handler, nullptr);
+    fluid_set_log_function(FLUID_WARN, quiet_log_handler, nullptr);
+    fluid_set_log_function(FLUID_INFO, quiet_log_handler, nullptr);
+    fluid_set_log_function(FLUID_DBG, quiet_log_handler, nullptr);
+    settings = new_fluid_settings();
+    synth = new_fluid_synth(settings);
+
+    std::string soundFont = "assets/midi/FluidR3_GM.sf2";
+    if (fluid_synth_sfload(synth, soundFont.c_str(), 1) == FLUID_FAILED) {
+        std::cerr << "Failed to load SoundFont: " << soundFont << "\n";
+        throw std::invalid_argument("sf2 file not found");
+    }
+    fluid_settings_setstr(settings, "audio.driver", "pulseaudio");
+    driver = new_fluid_audio_driver(settings, synth);
+    player = new_fluid_player(synth);
+    if (fluid_player_add(player, midiPath.c_str()) != FLUID_OK) {
+        std::cerr << "Failed to load MIDI file\n";
+        throw std::invalid_argument("midi file not found");
+    }
+    fluid_settings_setnum(settings, "synth.gain", 2);
+}
+
 midiEvent::midiEvent(midiFile::midiEventName _type, uint8_t _noteIndex, uint8_t _noteVelocity, uint32_t _tickTime, uint8_t _noteChannel, uint32_t _sumTickTime, uint32_t _Tempo)
     : type(_type), noteIndex(_noteIndex), noteVelocity(_noteVelocity), tickTime(_tickTime), noteChannel(_noteChannel), sumTickTime(_sumTickTime), Tempo(_Tempo), sumSecondTime(0), metaType(midiFile::MetaEventName::Sequence)
 {
@@ -335,3 +374,5 @@ playingNote::playingNote()
     : startTime(0)
 {
 }
+
+

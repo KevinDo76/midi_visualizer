@@ -2,6 +2,7 @@
 #include <string>
 #include <fstream>
 #include <vector>
+#include <fluidsynth.h>
 
 class midiEvent;
 class midiTrack;
@@ -42,6 +43,7 @@ public:
 		SequencerSpecific = 0x7F,
 	};
     midiFile(std::string filePath);
+    void updateCurrentTime();
 
     uint32_t readVariableAmount(std::ifstream& inputMidi);
     std::string readString(std::ifstream &inputMidi, uint32_t length);
@@ -55,9 +57,19 @@ public:
     uint32_t timeSignatureDenominator;
     uint32_t clocksPerTick;
     uint32_t _32per24Clocks;
+    double currentTime;
+    
+    fluid_player_t* player;
+    fluid_settings_t* settings;
+
 private:
-    uint32_t Tempo = 0;
-	uint32_t BPM = 0;
+    uint32_t Tempo;
+    uint32_t lastTick;
+    
+    fluid_audio_driver_t* driver;
+    fluid_synth_t* synth;
+
+    void fluidsynthInit(std::string midiPath);
     
 };
 

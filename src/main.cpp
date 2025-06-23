@@ -9,7 +9,6 @@
 #include <cmath>
 #include <fluidsynth.h>
 
-void quiet_log_handler(int level, const char* message, void* data) {}
 
 int main()
 {
@@ -20,29 +19,9 @@ int main()
     int screenHeight = 1000;
     SDL_Window *window = nullptr;
     SDL_Renderer *renderer = nullptr;
-    std::string midiFilePath = "assets/midi/fireflies.mid";
+    std::string midiFilePath = "assets/midi/ievan_polkka.mid";
     midiFile midiObj(midiFilePath);
 
-    fluid_set_log_function(FLUID_PANIC, quiet_log_handler, nullptr);
-    fluid_set_log_function(FLUID_ERR, quiet_log_handler, nullptr);
-    fluid_set_log_function(FLUID_WARN, quiet_log_handler, nullptr);
-    fluid_set_log_function(FLUID_INFO, quiet_log_handler, nullptr);
-    fluid_set_log_function(FLUID_DBG, quiet_log_handler, nullptr);
-    fluid_settings_t* settings = new_fluid_settings();
-    fluid_synth_t* synth = new_fluid_synth(settings);
-    std::string soundFont = "assets/midi/FluidR3_GM.sf2";
-    if (fluid_synth_sfload(synth, soundFont.c_str(), 1) == FLUID_FAILED) {
-        std::cerr << "Failed to load SoundFont: " << soundFont << "\n";
-        return 1;
-    }
-    fluid_settings_setstr(settings, "audio.driver", "pulseaudio");
-    fluid_audio_driver_t* adriver = new_fluid_audio_driver(settings, synth);
-    fluid_player_t* player = new_fluid_player(synth);
-    if (fluid_player_add(player, midiFilePath.c_str()) != FLUID_OK) {
-        std::cerr << "Failed to load MIDI file\n";
-        return 1;
-    }
-    fluid_settings_setnum(settings, "synth.gain", 2);
 
     SDL_SetAppMetadata("Midi Visualizer", "0.0", "Midi Visualizer");
     if (!SDL_Init(SDL_INIT_VIDEO)) {
@@ -66,20 +45,18 @@ int main()
     }
     SDL_Event currentEvent;
     
-    fluid_player_play(player);
+    fluid_player_play(midiObj.player);
     std::chrono::time_point startTime = std::chrono::high_resolution_clock::now();
     std::chrono::time_point lastTime = std::chrono::high_resolution_clock::now();
-    double currentTime = 0;
     uint32_t lastTick = 0;
     while (appRunning)
     {
         SDL_GetWindowSizeInPixels(window, &screenWidth, &screenHeight);
-        
-        uint32_t currentTick = fluid_player_get_current_tick(player);
-        uint32_t tickDelta = currentTick - lastTick;
-        lastTick = currentTick;
-        currentTime+=(tickDelta * fluid_player_get_midi_tempo(player)) / (midiObj.division * 1000000.0);
+        midiObj.updateCurrentTime();
+
+
         double timeDelta = (double)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()-lastTime).count()/1000;
+
         //double currentTime = (double)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()-startTime).count()/1000000
         lastTime = std::chrono::high_resolution_clock::now();
         std::chrono::time_point startFrameTime = std::chrono::high_resolution_clock::now();
@@ -96,7 +73,7 @@ int main()
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
 
         for (int i=0;i<midiObj.unifiedNotes.size();i++){
-            if (currentTime>=midiObj.unifiedNotes[i].startTime && (currentTime - midiObj.unifiedNotes[i].startTime)<screenWidth/60-2) {
+            if (midiObj.currentTime>=midiObj.unifiedNotes[i].startTime && (midiObj.currentTime - midiObj.unifiedNotes[i].startTime)<screenWidth/60-2) {
                 SDL_FRect rect = {(float)std::fmod((float)midiObj.unifiedNotes[i].startTime*60, screenWidth),
                                   (127-(float)midiObj.unifiedNotes[i].note)/127.0f*screenHeight,
                                   (float)midiObj.unifiedNotes[i].duration*60,
@@ -119,7 +96,7 @@ int main()
         std::stringstream fpsDebug;
         fpsDebug<<1/timeDelta*1000<<"FPS";
         SDL_RenderDebugText(renderer, 0,0,fpsDebug.str().c_str());
-        SDL_RenderLine(renderer, (float)std::fmod(currentTime*60.0f, screenWidth), 0, (float)std::fmod(currentTime*60.0f, screenWidth), screenHeight);
+        SDL_RenderLine(renderer, (float)std::fmod(midiObj.currentTime*60.0f, screenWidth), 0, (float)std::fmod(midiObj.currentTime*60.0f, screenWidth), screenHeight);
         
         SDL_RenderPresent(renderer);
         double frameTime = (double)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()-startFrameTime).count();
