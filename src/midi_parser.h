@@ -20,7 +20,7 @@ public:
         programChange = 0xC0,
         channelPressure = 0xD0,
         pitchBend = 0xE0,
-        systemExclusive = 0xF0
+        systemExclusive = 0xF0,
     };
 
     enum MetaEventName : uint8_t
@@ -50,6 +50,7 @@ public:
     std::vector<midiNote> unifiedNotes;
     std::ifstream inputMidi;
 
+    uint16_t division;
     uint32_t timeSignatureNumerator;
     uint32_t timeSignatureDenominator;
     uint32_t clocksPerTick;
@@ -63,12 +64,14 @@ private:
 class midiNote
 {
     public:
-        midiNote(uint8_t note, uint8_t velocity, double startTime, double duration, uint8_t channel);
+        midiNote(uint8_t note, uint8_t velocity, double startTime, double duration, uint8_t channel, uint32_t startTick, uint32_t durationTick);
         uint8_t note;
 	    uint8_t velocity;
         uint8_t channel;
+        uint32_t startTick;
 	    double startTime;
 	    double duration;
+        uint32_t durationTick;
     private:
 };
 
@@ -76,8 +79,8 @@ class playingNote
 {
     public:
         playingNote();
-        bool playing;
         double startTime;
+        uint32_t startTick;
     private:
 };
 
@@ -96,6 +99,7 @@ class midiEvent
         midiEvent(midiFile::midiEventName, uint8_t noteIndex, uint8_t noteVelocity, uint32_t tickTime, uint8_t noteChannel, uint32_t sumTickTime, uint32_t Tempo);
 
         midiFile::midiEventName type;
+        midiFile::MetaEventName metaType;
         uint8_t noteIndex;
         uint8_t noteVelocity;
         uint8_t noteChannel;

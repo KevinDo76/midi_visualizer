@@ -25,7 +25,7 @@ midiFile::midiFile(std::string filePath)
     uint32_t headerLength = 0;
     uint16_t format = 0;
     uint16_t trackCount = 0;
-    int16_t division = 0;
+    division = 0;
     inputMidi.read((char *)&midiMagicNumber, 4);
     inputMidi.read((char *)&headerLength, 4);
     inputMidi.read((char *)&format, 2);
@@ -47,7 +47,6 @@ midiFile::midiFile(std::string filePath)
     }
     std::cout<<format<<" "<<trackCount<<" "<<division<<"\n";   
     
-    std::vector<std::array<uint32_t, 2>> tempoChanges;
     for (int trackI=0;trackI<trackCount;trackI++)
     {
         midiTracks.emplace_back();
@@ -177,10 +176,11 @@ midiFile::midiFile(std::string filePath)
                             (Tempo |= (inputMidi.get() << 16));
                             (Tempo |= (inputMidi.get() << 8));
                             (Tempo |= (inputMidi.get() << 0));
-                            
-                            tempoChanges.push_back({Tempo, tickSum});
+       
                             BPM = (60000000 / Tempo);
                             std::cout << "Tempo: " << Tempo << " (" << BPM << "bpm)  " << tickSum << std::endl;
+                            midiTracks[trackI].midiEvents.emplace_back(midiEventName::systemExclusive, 0, 0, timeDelta, 0, tickSum, Tempo);
+                            midiTracks[trackI].midiEvents.back().metaType = midiFile::MetaEventName::SetTempo;
 							break;
 						case SMPTEOffset:
 							std::cout << "SMPTE: H:" << inputMidi.get() << " M:" << inputMidi.get() << " S:" << inputMidi.get() << " FR:" << inputMidi.get() << " FF:" << inputMidi.get() << std::endl;
@@ -233,14 +233,13 @@ midiFile::midiFile(std::string filePath)
 
     for (int i=0;i<unifiedEvents.size();i++)
     {
-        for (int tempoIndex=tempoChanges.size()-1; tempoIndex>=0; tempoIndex--)
+        if (unifiedEvents[i].type == midiFile::midiEventName::systemExclusive && unifiedEvents[i].metaType == midiFile::MetaEventName::SetTempo)
         {
-            if (tempoChanges[tempoIndex][1]<=unifiedEvents[i].sumTickTime)
-            {
-                unifiedEvents[i].Tempo = tempoChanges[tempoIndex][0];
-                break;
-            }
-        } 
+            Tempo = unifiedEvents[i].Tempo;
+        } else 
+        {
+            unifiedEvents[i].Tempo = Tempo;
+        }
     }
 
     //tick delta must be recalculated, this was a pain to figure out.
@@ -254,8 +253,8 @@ midiFile::midiFile(std::string filePath)
     double secondSum = 0;
     for (int i=0;i<unifiedEvents.size();i++)
     {
-        secondSum+=(unifiedEvents[i].tickTime * unifiedEvents[i].Tempo) / (division * 1000000.0);
         //secondSum += unifiedEvents[i].tickTime;
+        secondSum+=(unifiedEvents[i].tickTime * unifiedEvents[i].Tempo) / (division * 1000000.0);
         unifiedEvents[i].sumSecondTime = secondSum;
     }
 
@@ -265,11 +264,13 @@ midiFile::midiFile(std::string filePath)
         {
             noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].push_back({});
             noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex][noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].size()-1].startTime = unifiedEvents[i].sumSecondTime;
+            noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex][noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].size()-1].startTick = unifiedEvents[i].sumTickTime;
         } else if (unifiedEvents[i].type==midiFile::midiEventName::noteOff) {
             if (noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].size()>0)
             {
                 double noteStartTime = noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex][0].startTime;
-                unifiedNotes.push_back({unifiedEvents[i].noteIndex, unifiedEvents[i].noteVelocity, noteStartTime, unifiedEvents[i].sumSecondTime - noteStartTime, unifiedEvents[i].noteChannel});
+                uint32_t noteStartTick = noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex][0].startTick;
+                unifiedNotes.push_back({unifiedEvents[i].noteIndex, unifiedEvents[i].noteVelocity, noteStartTime, unifiedEvents[i].sumSecondTime - noteStartTime, unifiedEvents[i].noteChannel, unifiedEvents[i].sumTickTime, unifiedEvents[i].sumTickTime-noteStartTick});
                 noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].erase(noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].begin());
                 
             } else {
@@ -278,26 +279,6 @@ midiFile::midiFile(std::string filePath)
         }
     }
 
-    //for (int i=0;i<unifiedEvents.size();i++)
-    //{
-    //    if (unifiedEvents[i].type==midiFile::midiEventName::noteOn)
-    //    {
-    //        if (noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].playing)
-    //        {
-    //            unifiedNotes.push_back({unifiedEvents[i].noteIndex, unifiedEvents[i].noteVelocity, noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].startTime, unifiedEvents[i].sumSecondTime - noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].startTime});
-    //        }
-    //        noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].startTime = unifiedEvents[i].sumSecondTime;
-    //        noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].playing=true;
-    //    } else if (unifiedEvents[i].type==midiFile::midiEventName::noteOff) {
-    //        if (noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].playing)
-    //        {
-    //           unifiedNotes.push_back({unifiedEvents[i].noteIndex, unifiedEvents[i].noteVelocity, noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].startTime, unifiedEvents[i].sumSecondTime - noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].startTime});
-    //           noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].playing=false;
-    //        } else {
-    //            std::cout<<"Attempted to turn off an already off note! "<<i<<"\n";
-    //        }
-    //    }
-    //}
 
     std::sort(unifiedNotes.begin(), unifiedNotes.end(), [](midiNote a, midiNote b)
     {
@@ -335,7 +316,7 @@ std::string midiFile::readString(std::ifstream &inputMidi, uint32_t length)
 }
 
 midiEvent::midiEvent(midiFile::midiEventName _type, uint8_t _noteIndex, uint8_t _noteVelocity, uint32_t _tickTime, uint8_t _noteChannel, uint32_t _sumTickTime, uint32_t _Tempo)
-    : type(_type), noteIndex(_noteIndex), noteVelocity(_noteVelocity), tickTime(_tickTime), noteChannel(_noteChannel), sumTickTime(_sumTickTime), Tempo(_Tempo), sumSecondTime(0)
+    : type(_type), noteIndex(_noteIndex), noteVelocity(_noteVelocity), tickTime(_tickTime), noteChannel(_noteChannel), sumTickTime(_sumTickTime), Tempo(_Tempo), sumSecondTime(0), metaType(midiFile::MetaEventName::Sequence)
 {
 
 }
@@ -345,13 +326,13 @@ midiTrack::midiTrack()
 {
 }
 
-midiNote::midiNote(uint8_t _note, uint8_t _velocity, double _startTime, double _duration, uint8_t _channel)
-    : note(_note), velocity(_velocity), startTime(_startTime), duration(_duration), channel(_channel)
+midiNote::midiNote(uint8_t _note, uint8_t _velocity, double _startTime, double _duration, uint8_t _channel, uint32_t _startTick, uint32_t _durationTick)
+    : note(_note), velocity(_velocity), startTime(_startTime), duration(_duration), channel(_channel), startTick(_startTick), durationTick(_durationTick)
 {
 
 }
 
 playingNote::playingNote()
-    : startTime(0), playing(false)
+    : startTime(0)
 {
 }
