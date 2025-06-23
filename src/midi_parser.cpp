@@ -44,14 +44,16 @@ midiFile::midiFile(std::string filePath)
     division = std::byteswap(division);
 
     if ((division & 0x8000)) {
-        throw std::exception(); // invalid timing
+        throw std::exception(); // invalid timing proto
     }
 
     if (midiMagicNumber == 0x6468544d)
     {
         std::cout<<"Midi header detected\n";
+    } else {
+        throw std::invalid_argument("Provided file is not MIDI");
     }
-    std::cout<<format<<" "<<trackCount<<" "<<division<<"\n";   
+    std::cout<<"Format: "<<format<<" Track Count: "<<trackCount<<" Division: "<<division<<"\n";   
     
     for (int trackI=0;trackI<trackCount;trackI++)
     {
@@ -61,15 +63,16 @@ midiFile::midiFile(std::string filePath)
         uint8_t previousStatus = 0;
         std::string trackMagicNumber;
         uint32_t trackLength = 0;
+        int eventCount=0;
+
         trackMagicNumber=readString(inputMidi, 4);
         std::cout<<"------"<<trackMagicNumber<<"------"<<"\n";
+
         inputMidi.read((char *)&trackLength, 4);
         trackLength=std::byteswap(trackLength);
-        int eventCount=0;
         
         while (!inputMidi.eof() && !endOfTrack)
         {
-            //std::cout<<eventCount<<"\n";
             uint32_t timeDelta = readVariableAmount(inputMidi);
             tickSum+=timeDelta;
             uint8_t status = inputMidi.get();
