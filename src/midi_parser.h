@@ -44,6 +44,7 @@ public:
 	};
     midiFile(std::string filePath);
     void updateCurrentTime();
+    void resetCurrentTimeCounter();
 
     uint32_t readVariableAmount(std::ifstream& inputMidi);
     std::string readString(std::ifstream &inputMidi, uint32_t length);

@@ -17,8 +17,7 @@
 midiFile::midiFile(std::string filePath)
     : inputMidi(filePath, std::ios::binary)
 {
-    currentTime = 0; 
-    lastTick = 0;
+    resetCurrentTimeCounter();
     timeSignatureNumerator = 4;
     timeSignatureDenominator = 4;
     clocksPerTick = 24;
@@ -301,6 +300,12 @@ void midiFile::updateCurrentTime()
     uint32_t tickDelta = currentTick - lastTick;
     lastTick = currentTick;
     currentTime+=(tickDelta * fluid_player_get_midi_tempo(player)) / (division * 1000000.0);
+}
+
+void midiFile::resetCurrentTimeCounter()
+{
+    currentTime = 0;
+    lastTick = 0;
 }
 
 uint32_t midiFile::readVariableAmount(std::ifstream &inputMidi)

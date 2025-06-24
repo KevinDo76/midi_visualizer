@@ -19,7 +19,7 @@ int main()
     int screenHeight = 1000;
     SDL_Window *window = nullptr;
     SDL_Renderer *renderer = nullptr;
-    std::string midiFilePath = "assets/midi/ievan_polkka.mid";
+    std::string midiFilePath = "assets/midi/nevada.mid";
     midiFile midiObj(midiFilePath);
 
 
@@ -38,8 +38,8 @@ int main()
     SDL_SetWindowResizable(window, true);
     
     
-    std::vector<SDL_FRect>rectRenderBuff[16];
-    for (int i=0;i<16;i++)
+    std::vector<SDL_FRect>rectRenderBuff[17];
+    for (int i=0;i<17;i++)
     {
         rectRenderBuff[i].reserve(100);
     }
@@ -56,8 +56,6 @@ int main()
 
 
         double timeDelta = (double)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()-lastTime).count()/1000;
-
-        //double currentTime = (double)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()-startTime).count()/1000000
         lastTime = std::chrono::high_resolution_clock::now();
         std::chrono::time_point startFrameTime = std::chrono::high_resolution_clock::now();
         while (SDL_PollEvent(&currentEvent)) {
@@ -68,19 +66,28 @@ int main()
             }
         }
 
-        SDL_SetRenderDrawColor(renderer, 20, 20, 20, SDL_ALPHA_OPAQUE);
+        SDL_SetRenderDrawColor(renderer, 5, 5, 5, SDL_ALPHA_OPAQUE);
         SDL_RenderClear(renderer);
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
 
         for (int i=0;i<midiObj.unifiedNotes.size();i++){
-            if (midiObj.currentTime>=midiObj.unifiedNotes[i].startTime && (midiObj.currentTime - midiObj.unifiedNotes[i].startTime)<screenWidth/60-2) {
-                SDL_FRect rect = {(float)std::fmod((float)midiObj.unifiedNotes[i].startTime*60, screenWidth),
-                                  (127-(float)midiObj.unifiedNotes[i].note)/127.0f*screenHeight,
-                                  (float)midiObj.unifiedNotes[i].duration*60,
-                                  1000.0f/127.0f
-                };
+            float positionX = (float)midiObj.unifiedNotes[i].startTime*60-(midiObj.currentTime*60);
+            SDL_FRect rect = {positionX,
+                (127-(float)midiObj.unifiedNotes[i].note)/127.0f*screenHeight,
+                (float)midiObj.unifiedNotes[i].duration*60,
+                1000.0f/127.0f
+            };
+
+            if (positionX<screenWidth && positionX>20) {
                 rectRenderBuff[midiObj.unifiedNotes[i].channel].push_back(rect);
+            } else if (positionX>=screenWidth) {
+                break;
             }
+
+            if (positionX<=20 && positionX>-midiObj.unifiedNotes[i].duration*60) {
+                rectRenderBuff[16].push_back(rect);
+            }
+            
         }
 
         for (int i=0;i<16;i++)
@@ -93,12 +100,23 @@ int main()
             }
         }
 
+        if (rectRenderBuff[16].size()>0)
+        {
+            SDL_SetRenderDrawColor(renderer, 0, 0,255, SDL_ALPHA_OPAQUE);
+            SDL_RenderRects(renderer, &rectRenderBuff[16][0], rectRenderBuff[16].size()); // delightfully illegal move belike
+            rectRenderBuff[16].clear();    
+        }
+
+        SDL_RenderLine(renderer, 20,0,20,screenHeight);
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
+
+
         std::stringstream fpsDebug;
         fpsDebug<<1/timeDelta*1000<<"FPS";
         SDL_RenderDebugText(renderer, 0,0,fpsDebug.str().c_str());
-        SDL_RenderLine(renderer, (float)std::fmod(midiObj.currentTime*60.0f, screenWidth), 0, (float)std::fmod(midiObj.currentTime*60.0f, screenWidth), screenHeight);
-        
         SDL_RenderPresent(renderer);
+
+
         double frameTime = (double)std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now()-startFrameTime).count();
         std::this_thread::sleep_for(std::chrono::microseconds((int)(minFrameTime-frameTime)));
     }
