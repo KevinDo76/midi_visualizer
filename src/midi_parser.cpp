@@ -14,6 +14,8 @@
 #include <fluidsynth.h>
 #include <exception>
 
+#define SF2_FILE_PATH "/usr/share/soundfonts/FluidR3_GM.sf2"
+
 midiFile::midiFile(std::string filePath)
     : inputMidi(filePath, std::ios::binary)
 {
@@ -346,7 +348,7 @@ void midiFile::fluidsynthInit(std::string midiPath)
     settings = new_fluid_settings();
     synth = new_fluid_synth(settings);
 
-    std::string soundFont = "assets/midi/FluidR3_GM.sf2";
+    std::string soundFont = SF2_FILE_PATH;
     if (fluid_synth_sfload(synth, soundFont.c_str(), 1) == FLUID_FAILED) {
         std::cerr << "Failed to load SoundFont: " << soundFont << "\n";
         throw std::invalid_argument("sf2 file not found");

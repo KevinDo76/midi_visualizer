@@ -19,7 +19,7 @@ int main()
     int screenHeight = 1000;
     SDL_Window *window = nullptr;
     SDL_Renderer *renderer = nullptr;
-    std::string midiFilePath = "assets/midi/nevada.mid";
+    std::string midiFilePath = "assets/midi/badapple.mid";
     midiFile midiObj(midiFilePath);
 
 
