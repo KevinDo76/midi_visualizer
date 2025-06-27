@@ -4,7 +4,7 @@
     //A healthy dose of
         //https://ccrma.stanford.edu/~craig/14q/midifile/MidiFileFormat.html
     //andd some suggestion from ChatGPT
-#include "midi_parser.h"
+#include "midiParser.h"
 #include <iostream>
 #include <cstdint>
 #include <byteswap.h>
@@ -17,7 +17,7 @@
 #define SF2_FILE_PATH "/usr/share/soundfonts/FluidR3_GM.sf2"
 
 midiFile::midiFile(std::string filePath)
-    : inputMidi(filePath, std::ios::binary)
+    : inputMidi(filePath, std::ios::binary), timerStart(false)
 {
     resetCurrentTimeCounter();
     timeSignatureNumerator = 4;
@@ -298,6 +298,17 @@ midiFile::midiFile(std::string filePath)
 
 void midiFile::updateCurrentTime()
 {
+    if (fluid_player_get_status(player)==FLUID_PLAYER_READY && currentTime>=0 && timerStart)
+    {
+        fluid_player_play(player);
+    } else if (currentTime<0 && timerStart)
+    {
+        std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
+        double timeDelta = (double)std::chrono::duration_cast<std::chrono::microseconds>(now - lastTime).count()/1000000.0;
+        lastTime = now;
+        currentTime+=timeDelta;
+        return;
+    }
     uint32_t currentTick = fluid_player_get_current_tick(player);
     uint32_t tickDelta = currentTick - lastTick;
     lastTick = currentTick;
@@ -308,6 +319,12 @@ void midiFile::resetCurrentTimeCounter()
 {
     currentTime = 0;
     lastTick = 0;
+}
+
+void midiFile::startPlayback()
+{
+    lastTime = std::chrono::high_resolution_clock::now();
+    timerStart=true;       
 }
 
 uint32_t midiFile::readVariableAmount(std::ifstream &inputMidi)
@@ -341,9 +358,9 @@ void quiet_log_handler(int level, const char* message, void* data) {}
 void midiFile::fluidsynthInit(std::string midiPath)
 {
     fluid_set_log_function(FLUID_PANIC, quiet_log_handler, nullptr);
-    fluid_set_log_function(FLUID_ERR, quiet_log_handler, nullptr);
-    fluid_set_log_function(FLUID_WARN, quiet_log_handler, nullptr);
-    fluid_set_log_function(FLUID_INFO, quiet_log_handler, nullptr);
+    //fluid_set_log_function(FLUID_ERR, quiet_log_handler, nullptr);
+    //fluid_set_log_function(FLUID_WARN, quiet_log_handler, nullptr);
+    //fluid_set_log_function(FLUID_INFO, quiet_log_handler, nullptr);
     fluid_set_log_function(FLUID_DBG, quiet_log_handler, nullptr);
     settings = new_fluid_settings();
     synth = new_fluid_synth(settings);

@@ -3,6 +3,7 @@
 #include <fstream>
 #include <vector>
 #include <fluidsynth.h>
+#include <chrono>
 
 class midiEvent;
 class midiTrack;
@@ -45,6 +46,7 @@ public:
     midiFile(std::string filePath);
     void updateCurrentTime();
     void resetCurrentTimeCounter();
+    void startPlayback();
 
     uint32_t readVariableAmount(std::ifstream& inputMidi);
     std::string readString(std::ifstream &inputMidi, uint32_t length);
@@ -70,6 +72,8 @@ private:
     fluid_audio_driver_t* driver;
     fluid_synth_t* synth;
 
+    std::chrono::high_resolution_clock::time_point lastTime;
+    bool timerStart;
     void fluidsynthInit(std::string midiPath);
     
 };
