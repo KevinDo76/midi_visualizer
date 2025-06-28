@@ -266,16 +266,21 @@ midiFile::midiFile(std::string filePath)
         unifiedEvents[i].sumSecondTime = secondSum;
     }
 
+    int concurrentNotes = 0;
+    int concurrentNoteMax = 0;
     for (int i=0;i<unifiedEvents.size();i++)
     {
         if (unifiedEvents[i].type==midiFile::midiEventName::noteOn)
         {
+            concurrentNotes++;
+            if (concurrentNotes>concurrentNoteMax) { concurrentNoteMax = concurrentNotes;}
             noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].push_back({});
             noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex][noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].size()-1].startTime = unifiedEvents[i].sumSecondTime;
             noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex][noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].size()-1].startTick = unifiedEvents[i].sumTickTime;
         } else if (unifiedEvents[i].type==midiFile::midiEventName::noteOff) {
             if (noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].size()>0)
             {
+                concurrentNotes--;
                 double noteStartTime = noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex][0].startTime;
                 uint32_t noteStartTick = noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex][0].startTick;
                 unifiedNotes.push_back({unifiedEvents[i].noteIndex, unifiedEvents[i].noteVelocity, noteStartTime, unifiedEvents[i].sumSecondTime - noteStartTime, unifiedEvents[i].noteChannel, unifiedEvents[i].sumTickTime, unifiedEvents[i].sumTickTime-noteStartTick});
@@ -286,6 +291,8 @@ midiFile::midiFile(std::string filePath)
             }
         }
     }
+
+    std::cout<<"Concurrent notes: "<<concurrentNoteMax<<"\n";
 
 
     std::sort(unifiedNotes.begin(), unifiedNotes.end(), [](midiNote a, midiNote b)
@@ -363,21 +370,24 @@ void midiFile::fluidsynthInit(std::string midiPath)
     //fluid_set_log_function(FLUID_INFO, quiet_log_handler, nullptr);
     fluid_set_log_function(FLUID_DBG, quiet_log_handler, nullptr);
     settings = new_fluid_settings();
-    synth = new_fluid_synth(settings);
+    fluid_settings_setstr(settings, "audio.driver", "pulseaudio");
+    fluid_settings_setnum(settings, "synth.sample-rate", 44100.0/2); 
+    fluid_settings_setnum(settings, "synth.gain", 2);
 
+    synth = new_fluid_synth(settings);
+    
     std::string soundFont = SF2_FILE_PATH;
     if (fluid_synth_sfload(synth, soundFont.c_str(), 1) == FLUID_FAILED) {
         std::cerr << "Failed to load SoundFont: " << soundFont << "\n";
         throw std::invalid_argument("sf2 file not found");
     }
-    fluid_settings_setstr(settings, "audio.driver", "pulseaudio");
     driver = new_fluid_audio_driver(settings, synth);
     player = new_fluid_player(synth);
     if (fluid_player_add(player, midiPath.c_str()) != FLUID_OK) {
         std::cerr << "Failed to load MIDI file\n";
         throw std::invalid_argument("midi file not found");
     }
-    fluid_settings_setnum(settings, "synth.gain", 2);
+    
 }
 
 midiEvent::midiEvent(midiFile::midiEventName _type, uint8_t _noteIndex, uint8_t _noteVelocity, uint32_t _tickTime, uint8_t _noteChannel, uint32_t _sumTickTime, uint32_t _Tempo)

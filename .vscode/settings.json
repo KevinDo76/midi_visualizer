@@ -68,6 +68,7 @@
         "condition_variable": "cpp",
         "list": "cpp",
         "set": "cpp",
-        "mutex": "cpp"
+        "mutex": "cpp",
+        "print": "cpp"
     }
 }

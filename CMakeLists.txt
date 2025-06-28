@@ -5,8 +5,8 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-file(GLOB SOURCE "src/*.cpp")
-file(GLOB HEADER "src/*.h")
+file(GLOB_RECURSE SOURCE "src/*.cpp")
+file(GLOB_RECURSE HEADER "src/*.h")
 
 
 add_subdirectory(lib/fluidsynth)
