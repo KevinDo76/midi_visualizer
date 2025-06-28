@@ -81,7 +81,7 @@ private:
 class midiNote
 {
     public:
-        midiNote(uint8_t note, uint8_t velocity, double startTime, double duration, uint8_t channel, uint32_t startTick, uint32_t durationTick);
+        midiNote(uint8_t note, uint8_t velocity, double startTime, double duration, uint8_t channel, uint32_t startTick, uint32_t durationTick, uint32_t track, uint32_t _program);
         uint8_t note;
 	    uint8_t velocity;
         uint8_t channel;
@@ -89,6 +89,8 @@ class midiNote
 	    double startTime;
 	    double duration;
         uint32_t durationTick;
+        uint32_t track;
+        uint32_t program;
     private:
 };
 
@@ -113,7 +115,7 @@ class midiTrack
 class midiEvent
 {
     public:
-        midiEvent(midiFile::midiEventName, uint8_t noteIndex, uint8_t noteVelocity, uint32_t tickTime, uint8_t noteChannel, uint32_t sumTickTime, uint32_t Tempo);
+        midiEvent(midiFile::midiEventName, uint8_t noteIndex, uint8_t noteVelocity, uint32_t tickTime, uint8_t noteChannel, uint32_t sumTickTime, uint32_t Tempo, uint32_t track);
 
         midiFile::midiEventName type;
         midiFile::MetaEventName metaType;
@@ -124,7 +126,8 @@ class midiEvent
         uint32_t sumTickTime;
         double sumSecondTime;
         uint32_t Tempo;
-
+        uint32_t track;
+        
     private:
 
 };

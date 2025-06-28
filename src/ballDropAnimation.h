@@ -7,6 +7,9 @@ struct actionList {
     double deltaTimeToNext;
     uint32_t startTick;
     int combinedNoteCount;
+    int note;
+    uint32_t track;
+    uint32_t program;
 };
 
 struct actionMetaData {
@@ -16,17 +19,19 @@ struct actionMetaData {
     float startTime;
 };
 
+
 class ballDropAnimation
 {
 public:
     ballDropAnimation(midiFile& midiFile);
-    void drawBallDrop(SDL_Window* window, SDL_Renderer *renderer, midiFile &midiObj);
+    void drawBallDrop(SDL_Window* window, SDL_Renderer *renderer, midiFile &midiObj, float timeDelta);
 private:
-    void drawBallDropSeperate(SDL_Window* window, SDL_Renderer *renderer, midiFile &midiObj, int index, float startY, float height);
+    void drawBallDropSeperate(SDL_Window* window, SDL_Renderer *renderer, midiFile &midiObj, int index, float startY, float height, float timeDelta);
     std::vector<actionList> unifiedActions;
     std::vector<std::vector<actionList>> seperateActions;
     std::vector<actionMetaData> unifiedAnimationFrame;
     std::vector<std::vector<actionMetaData>> seperateAnimationFrame;
     std::vector<int>currentBlock;
+    std::vector<std::vector<SDL_FPoint>> particles;
     int ballRenderY;
 };

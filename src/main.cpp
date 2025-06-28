@@ -16,7 +16,7 @@ int main()
 {
     const int maxFrameRate = 120;
     const float minFrameTime = (1.0f/maxFrameRate)*1000*1000;
-    const std::string midiFilePath = "assets/midi/nyan.mid";
+    const std::string midiFilePath = "assets/midi/omfg.mid";
 
     bool startAudio = false;
     bool appRunning=true;
@@ -84,7 +84,7 @@ int main()
 
         //ballAnimation.drawBalls(window, renderer, midiObj);
         //noteGraphObj.renderFrame(window, renderer, midiObj);
-        ballDrop.drawBallDrop(window, renderer, midiObj);
+        ballDrop.drawBallDrop(window, renderer, midiObj, timeDelta);
 
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
         std::stringstream fpsDebug;

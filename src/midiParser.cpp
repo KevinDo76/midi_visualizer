@@ -92,7 +92,7 @@ midiFile::midiFile(std::string filePath)
                 uint8_t channel = status&0x0F;
                 uint8_t noteIndex = inputMidi.get();
                 uint8_t noteVelocity = inputMidi.get();
-                midiTracks[trackI].midiEvents.push_back({midiEventName::noteOff, noteIndex, noteVelocity, timeDelta, channel, tickSum, Tempo});
+                midiTracks[trackI].midiEvents.push_back({midiEventName::noteOff, noteIndex, noteVelocity, timeDelta, channel, tickSum, Tempo, trackI});
                 
                 if (noteIndex>127) {std::cout<<"high "<<eventCount<<" "<<(int)noteIndex<<"track: "<<trackI<<"\n";}
             } else if (eventType == midiEventName::noteOn) {
@@ -101,9 +101,9 @@ midiFile::midiFile(std::string filePath)
                 uint8_t noteVelocity = inputMidi.get();
                 if (noteVelocity > 0)
                 {
-                    midiTracks[trackI].midiEvents.push_back({midiEventName::noteOn, noteIndex, noteVelocity, timeDelta, channel, tickSum, Tempo});
+                    midiTracks[trackI].midiEvents.push_back({midiEventName::noteOn, noteIndex, noteVelocity, timeDelta, channel, tickSum, Tempo, trackI});
                 } else {
-                    midiTracks[trackI].midiEvents.push_back({midiEventName::noteOff, noteIndex, noteVelocity, timeDelta, channel, tickSum, Tempo});
+                    midiTracks[trackI].midiEvents.push_back({midiEventName::noteOff, noteIndex, noteVelocity, timeDelta, channel, tickSum, Tempo, trackI});
                 }
 
                 if (noteIndex>127) {std::cout<<"high "<<eventCount<<(int)noteIndex<<"track: "<<trackI<<"\n";}
@@ -111,16 +111,16 @@ midiFile::midiFile(std::string filePath)
                 uint8_t channel = status&0x0F;
                 uint8_t noteIndex = inputMidi.get();
                 uint8_t noteVelocity = inputMidi.get();
-                midiTracks[trackI].midiEvents.emplace_back(midiEventName::afterTouch, noteIndex, noteVelocity, timeDelta, channel, tickSum, Tempo);
+                midiTracks[trackI].midiEvents.emplace_back(midiEventName::afterTouch, noteIndex, noteVelocity, timeDelta, channel, tickSum, Tempo, trackI);
             } else if (eventType == midiEventName::controlChange) {
                 uint8_t channel = status&0x0F;
                 uint8_t noteIndex = inputMidi.get();
                 uint8_t noteVelocity = inputMidi.get();
-                midiTracks[trackI].midiEvents.emplace_back(midiEventName::controlChange, noteIndex, noteVelocity, timeDelta, channel, tickSum, Tempo);
+                midiTracks[trackI].midiEvents.emplace_back(midiEventName::controlChange, noteIndex, noteVelocity, timeDelta, channel, tickSum, Tempo, trackI);
             } else if (eventType == midiEventName::programChange) {
                 uint8_t channel = status&0x0F;
                 uint8_t programID = inputMidi.get();
-                midiTracks[trackI].midiEvents.emplace_back(midiEventName::programChange, programID, 0, timeDelta, channel, tickSum, Tempo);
+                midiTracks[trackI].midiEvents.emplace_back(midiEventName::programChange, programID, 0, timeDelta, channel, tickSum, Tempo, trackI);
             } else if (eventType == midiEventName::channelPressure) {
                 uint8_t channel = status&0x0F;
                 uint8_t programID = inputMidi.get();
@@ -188,7 +188,7 @@ midiFile::midiFile(std::string filePath)
                             (Tempo |= (inputMidi.get() << 0));
        
                             std::cout << "Tempo: " << Tempo << tickSum << std::endl;
-                            midiTracks[trackI].midiEvents.emplace_back(midiEventName::systemExclusive, 0, 0, timeDelta, 0, tickSum, Tempo);
+                            midiTracks[trackI].midiEvents.emplace_back(midiEventName::systemExclusive, 0, 0, timeDelta, 0, tickSum, Tempo, trackI);
                             midiTracks[trackI].midiEvents.back().metaType = midiFile::MetaEventName::SetTempo;
 							break;
 						case SMPTEOffset:
@@ -268,6 +268,7 @@ midiFile::midiFile(std::string filePath)
 
     int concurrentNotes = 0;
     int concurrentNoteMax = 0;
+    std::array<uint32_t, 16>currentChannelProgram;
     for (int i=0;i<unifiedEvents.size();i++)
     {
         if (unifiedEvents[i].type==midiFile::midiEventName::noteOn)
@@ -275,20 +276,21 @@ midiFile::midiFile(std::string filePath)
             concurrentNotes++;
             if (concurrentNotes>concurrentNoteMax) { concurrentNoteMax = concurrentNotes;}
             noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].push_back({});
-            noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex][noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].size()-1].startTime = unifiedEvents[i].sumSecondTime;
-            noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex][noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].size()-1].startTick = unifiedEvents[i].sumTickTime;
+            noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].back().startTime = unifiedEvents[i].sumSecondTime;
+            noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].back().startTick = unifiedEvents[i].sumTickTime;
         } else if (unifiedEvents[i].type==midiFile::midiEventName::noteOff) {
             if (noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].size()>0)
             {
                 concurrentNotes--;
                 double noteStartTime = noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex][0].startTime;
                 uint32_t noteStartTick = noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex][0].startTick;
-                unifiedNotes.push_back({unifiedEvents[i].noteIndex, unifiedEvents[i].noteVelocity, noteStartTime, unifiedEvents[i].sumSecondTime - noteStartTime, unifiedEvents[i].noteChannel, unifiedEvents[i].sumTickTime, unifiedEvents[i].sumTickTime-noteStartTick});
+                unifiedNotes.push_back({unifiedEvents[i].noteIndex, unifiedEvents[i].noteVelocity, noteStartTime, unifiedEvents[i].sumSecondTime - noteStartTime, unifiedEvents[i].noteChannel, unifiedEvents[i].sumTickTime, unifiedEvents[i].sumTickTime-noteStartTick, unifiedEvents[i].track, currentChannelProgram[unifiedEvents[i].noteChannel]});
                 noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].erase(noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].begin());
-                
             } else {
                 std::cout<<"Attempted to turn off an already off note! "<<i<<"\n";
             }
+        } else if (unifiedEvents[i].type == midiFile::midiEventName::programChange) {
+            currentChannelProgram[unifiedEvents[i].noteChannel] = unifiedEvents[i].noteIndex;
         }
     }
 
@@ -371,7 +373,7 @@ void midiFile::fluidsynthInit(std::string midiPath)
     fluid_set_log_function(FLUID_DBG, quiet_log_handler, nullptr);
     settings = new_fluid_settings();
     fluid_settings_setstr(settings, "audio.driver", "pulseaudio");
-    fluid_settings_setnum(settings, "synth.sample-rate", 44100.0/2); 
+    fluid_settings_setnum(settings, "synth.sample-rate", 44100.0); 
     fluid_settings_setnum(settings, "synth.gain", 2);
 
     synth = new_fluid_synth(settings);
@@ -390,8 +392,8 @@ void midiFile::fluidsynthInit(std::string midiPath)
     
 }
 
-midiEvent::midiEvent(midiFile::midiEventName _type, uint8_t _noteIndex, uint8_t _noteVelocity, uint32_t _tickTime, uint8_t _noteChannel, uint32_t _sumTickTime, uint32_t _Tempo)
-    : type(_type), noteIndex(_noteIndex), noteVelocity(_noteVelocity), tickTime(_tickTime), noteChannel(_noteChannel), sumTickTime(_sumTickTime), Tempo(_Tempo), sumSecondTime(0), metaType(midiFile::MetaEventName::Sequence)
+midiEvent::midiEvent(midiFile::midiEventName _type, uint8_t _noteIndex, uint8_t _noteVelocity, uint32_t _tickTime, uint8_t _noteChannel, uint32_t _sumTickTime, uint32_t _Tempo, uint32_t _track)
+    : type(_type), noteIndex(_noteIndex), noteVelocity(_noteVelocity), tickTime(_tickTime), noteChannel(_noteChannel), sumTickTime(_sumTickTime), Tempo(_Tempo), sumSecondTime(0), metaType(midiFile::MetaEventName::Sequence), track(_track)
 {
 
 }
@@ -401,8 +403,8 @@ midiTrack::midiTrack()
 {
 }
 
-midiNote::midiNote(uint8_t _note, uint8_t _velocity, double _startTime, double _duration, uint8_t _channel, uint32_t _startTick, uint32_t _durationTick)
-    : note(_note), velocity(_velocity), startTime(_startTime), duration(_duration), channel(_channel), startTick(_startTick), durationTick(_durationTick)
+midiNote::midiNote(uint8_t _note, uint8_t _velocity, double _startTime, double _duration, uint8_t _channel, uint32_t _startTick, uint32_t _durationTick,  uint32_t _track, uint32_t _program)
+    : note(_note), velocity(_velocity), startTime(_startTime), duration(_duration), channel(_channel), startTick(_startTick), durationTick(_durationTick), track(_track), program(_program)
 {
 
 }
