@@ -4,11 +4,13 @@
 #include <iostream>
 #include <cmath>
 #include <sstream>
+#include <SDL3_ttf/SDL_ttf.h>
 #define HORIZTONAL_VELOCITY 100
 #define GRAV_ACCELERATION -100
-#define COEFFICIENT_OF_RESTITUTION 1
+#define COEFFICIENT_OF_RESTITUTION 1.1f
 #define X_OFFSET 500
-ballDropAnimation::ballDropAnimation(midiFile &midiFile)
+ballDropAnimation::ballDropAnimation(midiFile &midiFile, SDL_Renderer *_renderer, TTF_Font* font)
+    : renderer(_renderer)
 {
     float duration;
     ballRenderY = 0;
@@ -23,7 +25,7 @@ ballDropAnimation::ballDropAnimation(midiFile &midiFile)
                 found = true;
                 break;
             }
-            if (std::abs(seperateActions[j].back().startTime - midiFile.unifiedNotes[i].startTime)<0.1 || midiFile.unifiedNotes[i].program !=seperateActions[j].back().program)
+            if (std::abs(seperateActions[j].back().startTime - midiFile.unifiedNotes[i].startTime)<0.1 || midiFile.unifiedNotes[i].program !=seperateActions[j].back().program || midiFile.unifiedNotes[i].track !=seperateActions[j].back().track)
             {
                 continue;
             } else {
@@ -39,6 +41,7 @@ ballDropAnimation::ballDropAnimation(midiFile &midiFile)
             currentBlock.push_back(0);
             particles.push_back({});
             seperateActions.back().push_back({midiFile.unifiedNotes[i].startTime, 0, midiFile.unifiedNotes[i].startTick, 1, midiFile.unifiedNotes[i].note, midiFile.unifiedNotes[i].track, midiFile.unifiedNotes[i].program, midiFile.unifiedNotes[i].channel});
+            ballLineActive.push_back(false);
         }
     }
 
@@ -67,26 +70,53 @@ ballDropAnimation::ballDropAnimation(midiFile &midiFile)
         }
     }
 
+    for (int i=0;i<seperateAnimationFrame.size();i++)
+    {
+        SDL_Color textColor = {255, 255, 255, 255};  // White
+
+        SDL_Surface *textSurface = TTF_RenderText_Solid(font, midiFile.getInstrumentName(seperateActions[i][0].program, seperateActions[i][0].channel).c_str(), 0, textColor);
+        if (!textSurface) {
+            SDL_Log("Text render failed: %s", SDL_GetError());
+        }
+        
+
+        SDL_Texture *textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
+        textTextures.push_back(textTexture);
+        SDL_DestroySurface(textSurface);  // Free surface after creating texture
+    }
+
     std::cout<<seperateActions.size()<<" drop\n";
 }
 
-void ballDropAnimation::drawBallDrop(SDL_Window *window, SDL_Renderer *renderer, midiFile &midiObj, float timeDelta)
+ballDropAnimation::~ballDropAnimation()
+{
+    for (int i=0;i<textTextures.size();i++)
+    {
+        SDL_DestroyTexture(textTextures[i]);
+    }
+}
+
+void ballDropAnimation::drawBallDrop(SDL_Window *window, midiFile &midiObj, float timeDelta)
 {
     int screenWidth = 2000;
     int screenHeight = 1000;
     SDL_GetWindowSizeInPixels(window, &screenWidth, &screenHeight);
     for (int i=0;i<seperateAnimationFrame.size();i++)
     {
-        drawBallDropSeperate(window, renderer, midiObj, i, screenHeight/seperateAnimationFrame.size()*i, screenHeight/seperateAnimationFrame.size(), timeDelta);
+        drawBallDropSeperate(window, midiObj, i, screenHeight/seperateAnimationFrame.size()*i, screenHeight/seperateAnimationFrame.size(), timeDelta);
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
         SDL_RenderLine(renderer, 0, screenHeight/seperateAnimationFrame.size()*i, screenWidth, screenHeight/seperateAnimationFrame.size()*i);
-        std::stringstream ballTextData;
-        ballTextData << midiObj.getInstrumentName(seperateActions[i][0].program, seperateActions[i][0].channel);
-        SDL_RenderDebugText(renderer, 0, screenHeight/seperateAnimationFrame.size()*i+(screenHeight/seperateAnimationFrame.size()/2)-4, ballTextData.str().c_str());
+        if (!ballLineActive[i])
+        {
+            continue;
+        }
+        SDL_FRect destRect = { 0.0f, screenHeight/seperateAnimationFrame.size()*i, 0.0f, 0.0f };
+        SDL_GetTextureSize(textTextures[i], &destRect.w, &destRect.h);
+        SDL_RenderTexture(renderer, textTextures[i], NULL, &destRect);
     }
 }
 
-void ballDropAnimation::drawBallDropSeperate(SDL_Window *window, SDL_Renderer *renderer, midiFile &midiObj, int index, float startY, float height, float timeDelta)
+void ballDropAnimation::drawBallDropSeperate(SDL_Window *window, midiFile &midiObj, int index, float startY, float height, float timeDelta)
 {
     int screenWidth = 2000;
     int screenHeight = 1000;
@@ -95,6 +125,7 @@ void ballDropAnimation::drawBallDropSeperate(SDL_Window *window, SDL_Renderer *r
     {
         if ((midiObj.currentTime >= seperateAnimationFrame[index][i].startTime && midiObj.currentTime <= (seperateAnimationFrame[index][i].startTime+seperateAnimationFrame[index][i].duration)) || (midiObj.currentTime >= seperateAnimationFrame[index][i].startTime && i==seperateActions[index].size()-1))
         {
+            ballLineActive[index] = true;
             float physicTime = midiObj.currentTime - seperateAnimationFrame[index][i].startTime;
             float positionY = seperateAnimationFrame[index][i].startPositionY + seperateAnimationFrame[index][i].startVelocityY*physicTime+0.5*GRAV_ACCELERATION*physicTime*physicTime;
             ballRenderY = positionY;
@@ -134,6 +165,10 @@ void ballDropAnimation::drawBallDropSeperate(SDL_Window *window, SDL_Renderer *r
     
     for (int i=0;i<seperateActions[index].size();i++)
     {
+        if (!ballLineActive[index])
+        {
+            continue;
+        }
         float positionX = seperateActions[index][i].startTime*HORIZTONAL_VELOCITY-(float)midiObj.currentTime*HORIZTONAL_VELOCITY+X_OFFSET;
         float positionY = height-seperateAnimationFrame[index][i].startPositionY;
         float mutliplier = 1+(i<=currentBlock[index])*((midiObj.currentTime-seperateActions[index][i].startTime)*4);

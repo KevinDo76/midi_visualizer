@@ -371,7 +371,7 @@ void midiFile::fluidsynthInit(std::string midiPath)
     //fluid_set_log_function(FLUID_ERR, quiet_log_handler, nullptr);
     //fluid_set_log_function(FLUID_WARN, quiet_log_handler, nullptr);
     //fluid_set_log_function(FLUID_INFO, quiet_log_handler, nullptr);
-    //fluid_set_log_function(FLUID_DBG, quiet_log_handler, nullptr);
+    fluid_set_log_function(FLUID_DBG, quiet_log_handler, nullptr);
     settings = new_fluid_settings();
     fluid_settings_setstr(settings, "audio.driver", "pulseaudio");
     fluid_settings_setnum(settings, "synth.sample-rate", 44100.0); 

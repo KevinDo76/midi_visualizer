@@ -11,7 +11,8 @@ file(GLOB_RECURSE HEADER "src/*.h")
 
 add_subdirectory(lib/fluidsynth)
 add_subdirectory(lib/SDL3)
+add_subdirectory(lib/SDL3_tff)
 
 add_executable(midi_visualizer ${SOURCE} ${HEADER})   
 
-target_link_libraries(midi_visualizer PRIVATE libfluidsynth SDL3::SDL3)
+target_link_libraries(midi_visualizer PRIVATE libfluidsynth SDL3::SDL3 SDL3_ttf::SDL3_ttf)

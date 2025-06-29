@@ -129,7 +129,7 @@ class midiEvent
         uint32_t sumTickTime;
         double sumSecondTime;
         uint32_t Tempo;
-        uint32_t track;
+        int32_t track;
 
     private:
 

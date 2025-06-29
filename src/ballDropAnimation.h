@@ -2,6 +2,7 @@
 #include <vector>
 #include <SDL3/SDL.h>
 #include "midiParser.h"
+#include <SDL3_ttf/SDL_ttf.h>
 struct actionList {
     double startTime;
     double deltaTimeToNext;
@@ -24,15 +25,19 @@ struct actionMetaData {
 class ballDropAnimation
 {
 public:
-    ballDropAnimation(midiFile& midiFile);
-    void drawBallDrop(SDL_Window* window, SDL_Renderer *renderer, midiFile &midiObj, float timeDelta);
+    ballDropAnimation(midiFile& midiFile, SDL_Renderer *renderer, TTF_Font*);
+    ~ballDropAnimation();
+    void drawBallDrop(SDL_Window* window, midiFile &midiObj, float timeDelta);
 private:
-    void drawBallDropSeperate(SDL_Window* window, SDL_Renderer *renderer, midiFile &midiObj, int index, float startY, float height, float timeDelta);
+    void drawBallDropSeperate(SDL_Window* window, midiFile &midiObj, int index, float startY, float height, float timeDelta);
     std::vector<actionList> unifiedActions;
     std::vector<std::vector<actionList>> seperateActions;
     std::vector<actionMetaData> unifiedAnimationFrame;
     std::vector<std::vector<actionMetaData>> seperateAnimationFrame;
     std::vector<int>currentBlock;
     std::vector<std::vector<SDL_FPoint>> particles;
+    std::vector<SDL_Texture* >textTextures;
+    std::vector<bool> ballLineActive;
+    SDL_Renderer *renderer;
     int ballRenderY;
 };

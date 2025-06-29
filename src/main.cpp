@@ -11,12 +11,12 @@
 #include "noteGraph.h"
 #include "ballLaunchAnimation.h"
 #include "ballDropAnimation.h"
-
+#include "SDL3_ttf/SDL_ttf.h"
 int main()
 {
     const int maxFrameRate = 120;
     const float minFrameTime = (1.0f/maxFrameRate)*1000*1000;
-    const std::string midiFilePath = "assets/midi/badapple.mid";
+    const std::string midiFilePath = "assets/midi/onon.mid";
 
     bool startAudio = false;
     bool appRunning=true;
@@ -37,10 +37,20 @@ int main()
     }
     SDL_SetWindowResizable(window, true);
 
+    if (!TTF_Init()) {
+        SDL_Log("Couldn't initialise SDL_ttf: %s\n", SDL_GetError());
+        return SDL_APP_FAILURE;
+    }
+    TTF_Font* font = TTF_OpenFont("assets/fonts/Silkscreen/Silkscreen-Bold.ttf", 18);
+    if (!font) {
+        SDL_Log("Couldn't open font: %s\n", SDL_GetError());
+        return SDL_APP_FAILURE;
+    }
+
     midiFile midiObj(midiFilePath);
     noteGraph noteGraphObj;
     ballLaunchAnimation ballAnimation(window, midiObj);
-    ballDropAnimation ballDrop(midiObj);
+    ballDropAnimation ballDrop(midiObj, renderer, font);
     
     SDL_Event currentEvent;
 
@@ -84,12 +94,12 @@ int main()
 
         //ballAnimation.drawBalls(window, renderer, midiObj);
         //noteGraphObj.renderFrame(window, renderer, midiObj);
-        ballDrop.drawBallDrop(window, renderer, midiObj, timeDelta);
+        ballDrop.drawBallDrop(window, midiObj, timeDelta);
 
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
         std::stringstream fpsDebug;
         fpsDebug<<1/timeDelta*1000<<"FPS";
-        //SDL_RenderDebugText(renderer, 0,0,fpsDebug.str().c_str());
+        //SDL_RenderDebugText(renderer, 100,0,fpsDebug.str().c_str());
         SDL_RenderPresent(renderer);
 
 
@@ -97,7 +107,8 @@ int main()
         std::this_thread::sleep_for(std::chrono::microseconds((int)(minFrameTime-frameTime)));
     }
 
-
+    TTF_CloseFont(font);
+    TTF_Quit();
     SDL_Quit();
     std::cout<<"SDL ended\n";
     return 0;
