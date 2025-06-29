@@ -44,6 +44,9 @@ public:
 		SequencerSpecific = 0x7F,
 	};
     midiFile(std::string filePath);
+    static std::string getInstrumentName(int programID);
+    static std::string getInstrumentName(int programID, int channel);
+    static std::string getInstrumentName(int programID, int channel, int note);
     void updateCurrentTime();
     void resetCurrentTimeCounter();
     void startPlayback();
@@ -127,7 +130,7 @@ class midiEvent
         double sumSecondTime;
         uint32_t Tempo;
         uint32_t track;
-        
+
     private:
 
 };

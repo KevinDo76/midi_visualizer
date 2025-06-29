@@ -16,11 +16,11 @@ int main()
 {
     const int maxFrameRate = 120;
     const float minFrameTime = (1.0f/maxFrameRate)*1000*1000;
-    const std::string midiFilePath = "assets/midi/nevada.mid";
+    const std::string midiFilePath = "assets/midi/badapple.mid";
 
     bool startAudio = false;
     bool appRunning=true;
-    int screenWidth = 2000;
+    int screenWidth = 2100;
     int screenHeight = (float)screenWidth/(3.0/2.0);
 
     SDL_Window *window = nullptr;
@@ -89,7 +89,7 @@ int main()
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
         std::stringstream fpsDebug;
         fpsDebug<<1/timeDelta*1000<<"FPS";
-        SDL_RenderDebugText(renderer, 0,0,fpsDebug.str().c_str());
+        //SDL_RenderDebugText(renderer, 0,0,fpsDebug.str().c_str());
         SDL_RenderPresent(renderer);
 
 

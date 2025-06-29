@@ -10,6 +10,7 @@ struct actionList {
     int note;
     uint32_t track;
     uint32_t program;
+    uint32_t channel;
 };
 
 struct actionMetaData {

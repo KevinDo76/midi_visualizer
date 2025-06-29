@@ -3,6 +3,7 @@
 #include "ballDropAnimation.h"
 #include <iostream>
 #include <cmath>
+#include <sstream>
 #define HORIZTONAL_VELOCITY 100
 #define GRAV_ACCELERATION -100
 #define COEFFICIENT_OF_RESTITUTION 1
@@ -18,7 +19,7 @@ ballDropAnimation::ballDropAnimation(midiFile &midiFile)
         {
             if (seperateActions[j].size()==0)
             {
-                seperateActions[j].push_back({midiFile.unifiedNotes[i].startTime, 0, midiFile.unifiedNotes[i].startTick, 1, midiFile.unifiedNotes[i].note, midiFile.unifiedNotes[i].track, midiFile.unifiedNotes[i].program});
+                seperateActions[j].push_back({midiFile.unifiedNotes[i].startTime, 0, midiFile.unifiedNotes[i].startTick, 1, midiFile.unifiedNotes[i].note, midiFile.unifiedNotes[i].track, midiFile.unifiedNotes[i].program, midiFile.unifiedNotes[i].channel});
                 found = true;
                 break;
             }
@@ -26,7 +27,7 @@ ballDropAnimation::ballDropAnimation(midiFile &midiFile)
             {
                 continue;
             } else {
-                seperateActions[j].push_back({midiFile.unifiedNotes[i].startTime, 0, midiFile.unifiedNotes[i].startTick, 1, midiFile.unifiedNotes[i].note, midiFile.unifiedNotes[i].track, midiFile.unifiedNotes[i].program});
+                seperateActions[j].push_back({midiFile.unifiedNotes[i].startTime, 0, midiFile.unifiedNotes[i].startTick, 1, midiFile.unifiedNotes[i].note, midiFile.unifiedNotes[i].track, midiFile.unifiedNotes[i].program, midiFile.unifiedNotes[i].channel});
                 found = true;
                 break;
             }
@@ -37,7 +38,7 @@ ballDropAnimation::ballDropAnimation(midiFile &midiFile)
             seperateAnimationFrame.push_back({});
             currentBlock.push_back(0);
             particles.push_back({});
-            seperateActions.back().push_back({midiFile.unifiedNotes[i].startTime, 0, midiFile.unifiedNotes[i].startTick, 1, midiFile.unifiedNotes[i].note, midiFile.unifiedNotes[i].track, midiFile.unifiedNotes[i].program});
+            seperateActions.back().push_back({midiFile.unifiedNotes[i].startTime, 0, midiFile.unifiedNotes[i].startTick, 1, midiFile.unifiedNotes[i].note, midiFile.unifiedNotes[i].track, midiFile.unifiedNotes[i].program, midiFile.unifiedNotes[i].channel});
         }
     }
 
@@ -79,6 +80,9 @@ void ballDropAnimation::drawBallDrop(SDL_Window *window, SDL_Renderer *renderer,
         drawBallDropSeperate(window, renderer, midiObj, i, screenHeight/seperateAnimationFrame.size()*i, screenHeight/seperateAnimationFrame.size(), timeDelta);
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
         SDL_RenderLine(renderer, 0, screenHeight/seperateAnimationFrame.size()*i, screenWidth, screenHeight/seperateAnimationFrame.size()*i);
+        std::stringstream ballTextData;
+        ballTextData << midiObj.getInstrumentName(seperateActions[i][0].program, seperateActions[i][0].channel);
+        SDL_RenderDebugText(renderer, 0, screenHeight/seperateAnimationFrame.size()*i+(screenHeight/seperateAnimationFrame.size()/2)-4, ballTextData.str().c_str());
     }
 }
 
@@ -118,7 +122,7 @@ void ballDropAnimation::drawBallDropSeperate(SDL_Window *window, SDL_Renderer *r
         particles[index][i].x-=HORIZTONAL_VELOCITY/(1/timeDelta*1000);
         float positionY = particles[index][i].y;
         positionY += (height/2-(height - ballRenderY))+startY;
-        if (particles[index][i].x>screenWidth || particles[index][i].x<0 || positionY+10>startY+height || positionY<startY)
+        if (particles[index][i].x>screenWidth || particles[index][i].x<0 || positionY>startY+height || positionY<startY)
         {
             continue;
         }
