@@ -4,3 +4,6 @@
 [submodule "lib/fluidsynth"]
 	path = lib/fluidsynth
 	url = https://github.com/FluidSynth/fluidsynth.git
+[submodule "lib/SDL3_tff"]
+	path = lib/SDL3_tff
+	url = https://github.com/libsdl-org/SDL_ttf.git
