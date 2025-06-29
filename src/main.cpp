@@ -16,7 +16,7 @@ int main()
 {
     const int maxFrameRate = 120;
     const float minFrameTime = (1.0f/maxFrameRate)*1000*1000;
-    const std::string midiFilePath = "assets/midi/omfg.mid";
+    const std::string midiFilePath = "assets/midi/nevada.mid";
 
     bool startAudio = false;
     bool appRunning=true;

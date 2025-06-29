@@ -373,7 +373,7 @@ void midiFile::fluidsynthInit(std::string midiPath)
     fluid_set_log_function(FLUID_DBG, quiet_log_handler, nullptr);
     settings = new_fluid_settings();
     fluid_settings_setstr(settings, "audio.driver", "pulseaudio");
-    fluid_settings_setnum(settings, "synth.sample-rate", 44100.0); 
+    fluid_settings_setnum(settings, "synth.sample-rate", 44100.0/2); 
     fluid_settings_setnum(settings, "synth.gain", 2);
 
     synth = new_fluid_synth(settings);

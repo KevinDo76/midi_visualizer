@@ -35,7 +35,7 @@ ballDropAnimation::ballDropAnimation(midiFile &midiFile)
         {
             seperateActions.push_back({});
             seperateAnimationFrame.push_back({});
-            currentBlock.push_back(-1);
+            currentBlock.push_back(0);
             particles.push_back({});
             seperateActions.back().push_back({midiFile.unifiedNotes[i].startTime, 0, midiFile.unifiedNotes[i].startTick, 1, midiFile.unifiedNotes[i].note, midiFile.unifiedNotes[i].track, midiFile.unifiedNotes[i].program});
         }
@@ -43,20 +43,7 @@ ballDropAnimation::ballDropAnimation(midiFile &midiFile)
 
     for (int i=0;i<seperateActions.size();i++)
     {
-        for (int j=0;j<seperateActions[i].size();j++)
-        {
-            double deltaTimeToNext = 0;
-            if (seperateActions[i].size()>1&&j<seperateActions[i].size()-1)
-            {
-                deltaTimeToNext = seperateActions[i][j+1].startTime-seperateActions[i][j].startTime; 
-            }
-            seperateActions[i][j].deltaTimeToNext = deltaTimeToNext;   
-        }
-    }
 
-
-    for (int i=0;i<seperateActions.size();i++)
-    {
         float startVelocityY = -50;
         float startPositionY = 900;
 
@@ -64,68 +51,23 @@ ballDropAnimation::ballDropAnimation(midiFile &midiFile)
         float newVelocityY = -(startVelocityY + GRAV_ACCELERATION*1*COEFFICIENT_OF_RESTITUTION);
 
         for (int j=0;j<seperateActions[i].size();j++) {
-            seperateAnimationFrame[i].push_back({startVelocityY, startPositionY, (float)seperateActions[i][j].deltaTimeToNext, (float)seperateActions[i][j].startTime});
+            float deltaTimeToNext = 0;
+            if (seperateActions[i].size()>1&&j<seperateActions[i].size()-1)
+            {
+                deltaTimeToNext = seperateActions[i][j+1].startTime-seperateActions[i][j].startTime; 
+            }
+            seperateAnimationFrame[i].push_back({startVelocityY, startPositionY, deltaTimeToNext, (float)seperateActions[i][j].startTime});
             
-            newPositionY = startPositionY + startVelocityY*seperateActions[i][j].deltaTimeToNext + 0.5*GRAV_ACCELERATION*seperateActions[i][j].deltaTimeToNext*seperateActions[i][j].deltaTimeToNext;
-            newVelocityY = std::clamp(-(startVelocityY + GRAV_ACCELERATION*seperateActions[i][j].deltaTimeToNext)*COEFFICIENT_OF_RESTITUTION, -150.0, 150.0);
+            newPositionY = startPositionY + startVelocityY*deltaTimeToNext + 0.5*GRAV_ACCELERATION*deltaTimeToNext*deltaTimeToNext;
+            newVelocityY = std::clamp(-(startVelocityY + GRAV_ACCELERATION*deltaTimeToNext)*COEFFICIENT_OF_RESTITUTION, -150.0f, 150.0f);
 
             startPositionY = newPositionY;
             startVelocityY = newVelocityY;
         }
     }
 
-
-    float startVelocityY = -50;
-    float startPositionY = 900;
-
-    float newPositionY = startPositionY + startVelocityY*1 + 0.5*GRAV_ACCELERATION*1;
-    float newVelocityY = -(startVelocityY + GRAV_ACCELERATION*1*COEFFICIENT_OF_RESTITUTION);
-    
-    
-    //startPositionY = newPositionY;
-    //startVelocityY = newVelocityY;
-    
-
     std::cout<<seperateActions.size()<<" drop\n";
 }
-
-
-//thx wikipedia https://en.wikipedia.org/w/index.php?title=Midpoint_circle_algorithm&oldid=889172082#C_example
-void drawcircleHere(SDL_Renderer* renderer, int x0, int y0, int radius)
-{
-    int x = radius-1;
-    int y = 0;
-    int dx = 1;
-    int dy = 1;
-    int err = dx - (radius << 1);
-
-    while (x >= y)
-    {
-        SDL_RenderPoint(renderer, x0 + x, y0 + y);
-        SDL_RenderPoint(renderer, x0 + y, y0 + x);
-        SDL_RenderPoint(renderer, x0 - y, y0 + x);
-        SDL_RenderPoint(renderer, x0 - x, y0 + y);
-        SDL_RenderPoint(renderer, x0 - x, y0 - y);
-        SDL_RenderPoint(renderer, x0 - y, y0 - x);
-        SDL_RenderPoint(renderer, x0 + y, y0 - x);
-        SDL_RenderPoint(renderer, x0 + x, y0 - y);
-
-        if (err <= 0)
-        {
-            y++;
-            err += dy;
-            dy += 2;
-        }
-        
-        if (err > 0)
-        {
-            x--;
-            dx += 2;
-            err += dx - (radius << 1);
-        }
-    }
-}
-
 
 void ballDropAnimation::drawBallDrop(SDL_Window *window, SDL_Renderer *renderer, midiFile &midiObj, float timeDelta)
 {
@@ -153,7 +95,7 @@ void ballDropAnimation::drawBallDropSeperate(SDL_Window *window, SDL_Renderer *r
             float positionY = seperateAnimationFrame[index][i].startPositionY + seperateAnimationFrame[index][i].startVelocityY*physicTime+0.5*GRAV_ACCELERATION*physicTime*physicTime;
             ballRenderY = positionY;
 
-            SDL_FPoint particle = {X_OFFSET, height-positionY};
+            SDL_FPoint particle = {X_OFFSET, height-positionY+2.5f};
             particles[index].push_back(particle);
             if (particles[index].size()>200)
             {
@@ -162,7 +104,6 @@ void ballDropAnimation::drawBallDropSeperate(SDL_Window *window, SDL_Renderer *r
             SDL_FRect rect = {X_OFFSET, startY + height/2, 10, 10};
             SDL_SetRenderDrawColor(renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);
             SDL_RenderRect(renderer, &rect);
-            //drawcircleHere(renderer, X_OFFSET+5, startY + height/2, 5);
             currentBlock[index] = i;
             break;
         }
@@ -185,13 +126,14 @@ void ballDropAnimation::drawBallDropSeperate(SDL_Window *window, SDL_Renderer *r
         SDL_SetRenderDrawColor(renderer, 0, 255, 0, SDL_ALPHA_OPAQUE);
         SDL_RenderPoint(renderer, particle.x, particle.y);
     }
-    //SDL_RenderPoints(renderer, &particles[index][0], particles[index].size());
+
     
     for (int i=0;i<seperateActions[index].size();i++)
     {
         float positionX = seperateActions[index][i].startTime*HORIZTONAL_VELOCITY-(float)midiObj.currentTime*HORIZTONAL_VELOCITY+X_OFFSET;
         float positionY = height-seperateAnimationFrame[index][i].startPositionY;
         float mutliplier = 1+(i<=currentBlock[index])*((midiObj.currentTime-seperateActions[index][i].startTime)*4);
+
         if (seperateAnimationFrame[index][i].startVelocityY>0)
         {
             positionY+=10*mutliplier;
@@ -205,10 +147,11 @@ void ballDropAnimation::drawBallDropSeperate(SDL_Window *window, SDL_Renderer *r
             continue;
         }
         SDL_FRect rect = {positionX, positionY, 10, 5};
-        SDL_SetRenderDrawColor(renderer, (float)seperateActions[index][i].note/127*205+50, (float)seperateActions[index][i].note/127*205+50, (float)seperateActions[index][i].note/127*205+50, SDL_ALPHA_OPAQUE);
-        if (i<=currentBlock[index])
-        {
+        float x = (float)seperateActions[index][i].note/127;
+        if (i<=currentBlock[index]) {
             SDL_SetRenderDrawColor(renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);
+        } else {
+            SDL_SetRenderDrawColor(renderer, std::sin(2*3.1415*x)*127+128, std::sin(2*3.1415*x+2*3.1415/3)*127+128, sin(2*3.1415*x+4*3.1415/3)*127+128, SDL_ALPHA_OPAQUE);
         }
         SDL_RenderFillRect(renderer, &rect);
     }
