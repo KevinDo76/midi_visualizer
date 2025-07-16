@@ -1,4 +1,5 @@
 #include <SDL3/SDL.h>
+#include <fluidsynth.h>
 #include <iostream>
 #include <stdint.h>
 #include <cstdlib>
@@ -7,7 +8,6 @@
 #include <thread>
 #include <sstream>
 #include <cmath>
-#include <fluidsynth.h>
 #include "noteGraph.h"
 #include "ballLaunchAnimation.h"
 #include "ballDropAnimation.h"
