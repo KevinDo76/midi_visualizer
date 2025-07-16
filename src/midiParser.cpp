@@ -288,7 +288,7 @@ midiFile::midiFile(std::string filePath)
                 unifiedNotes.push_back({unifiedEvents[i].noteIndex, unifiedEvents[i].noteVelocity, noteStartTime, unifiedEvents[i].sumSecondTime - noteStartTime, unifiedEvents[i].noteChannel, unifiedEvents[i].sumTickTime, unifiedEvents[i].sumTickTime-noteStartTick, unifiedEvents[i].track, currentChannelProgram[unifiedEvents[i].noteChannel]});
                 noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].erase(noteStateArray[unifiedEvents[i].noteChannel][unifiedEvents[i].noteIndex].begin());
             } else {
-                std::cout<<"Attempted to turn off an already off note! "<<i<<"\n";
+                std::cout<<"Attempted to turn off an already off note! "<<" "<<unifiedEvents[i].noteChannel<<unifiedEvents[i].track<<i<<"\n";
             }
         } else if (unifiedEvents[i].type == midiFile::midiEventName::programChange) {
             currentChannelProgram[unifiedEvents[i].noteChannel] = unifiedEvents[i].noteIndex;

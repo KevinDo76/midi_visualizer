@@ -110,7 +110,7 @@ void ballDropAnimation::drawBallDrop(SDL_Window *window, midiFile &midiObj, floa
         {
             continue;
         }
-        SDL_FRect destRect = { 0.0f, screenHeight/seperateAnimationFrame.size()*i, 0.0f, 0.0f };
+        SDL_FRect destRect = { 0.0f, (float)screenHeight/seperateAnimationFrame.size()*i, 0.0f, 0.0f };
         SDL_GetTextureSize(textTextures[i], &destRect.w, &destRect.h);
         SDL_RenderTexture(renderer, textTextures[i], NULL, &destRect);
     }
@@ -137,8 +137,8 @@ void ballDropAnimation::drawBallDropSeperate(SDL_Window *window, midiFile &midiO
                 particles[index].erase(particles[index].begin());
             }
             SDL_FRect rect = {X_OFFSET, startY + height/2, 10, 10};
-            SDL_SetRenderDrawColor(renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);
-            SDL_RenderRect(renderer, &rect);
+            SDL_SetRenderDrawColor(renderer, 255, 165, 0, SDL_ALPHA_OPAQUE);
+            SDL_RenderFillRect(renderer, &rect);
             currentBlock[index] = i;
             break;
         }
@@ -188,7 +188,7 @@ void ballDropAnimation::drawBallDropSeperate(SDL_Window *window, midiFile &midiO
         SDL_FRect rect = {positionX, positionY, 10, 5};
         float x = (float)seperateActions[index][i].note/127;
         if (i<=currentBlock[index]) {
-            SDL_SetRenderDrawColor(renderer, 255, 0, 0, SDL_ALPHA_OPAQUE);
+            SDL_SetRenderDrawColor(renderer, 0, 200, 200, SDL_ALPHA_OPAQUE);
         } else {
             SDL_SetRenderDrawColor(renderer, std::sin(2*3.1415*x)*127+128, std::sin(2*3.1415*x+2*3.1415/3)*127+128, sin(2*3.1415*x+4*3.1415/3)*127+128, SDL_ALPHA_OPAQUE);
         }
